@@ -32,3 +32,4 @@ Sesuai standar pemisahan konfigurasi, proyek ini menggunakan struktur:
    ```bash
    docker compose up -d --build
    ```
+<img width="956" height="446" alt="image" src="https://github.com/user-attachments/assets/46b7eae3-be72-4e4c-90b4-1bc6d79d8904" />
