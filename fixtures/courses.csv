@@ -1,0 +1,6 @@
+name,description,price,instructor_username,category_name
+Pemrograman Web dengan Django,Belajar membuat aplikasi web modern menggunakan Django Framework,150000,dosen01,Web Development
+Basis Data dengan PostgreSQL,Memahami perancangan database relasional dan optimasi query SQL,120000,dosen01,Database Design
+Algoritma dan Struktur Data,Konsep dasar algoritma dan implementasinya dalam Python,100000,dosen02,Algoritma & Struktur Data
+Jaringan Komputer Dasar,Pengenalan protokol jaringan TCP/IP dan keamanan jaringan,130000,dosen02,Jaringan Komputer
+Pemrograman Mobile Android,Membuat aplikasi Android native dengan Kotlin,175000,dosen02,Mobile Development

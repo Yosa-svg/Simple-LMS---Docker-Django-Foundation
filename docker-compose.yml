@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  web:
+  app:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
@@ -18,9 +16,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
     environment:
-      - POSTGRES_DB=lms_db
-      - POSTGRES_USER=lms_user
-      - POSTGRES_PASSWORD=lms_password
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
 

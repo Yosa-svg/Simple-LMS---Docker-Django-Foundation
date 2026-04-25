@@ -1,0 +1,8 @@
+username,email,first_name,last_name,role,password
+admin01,admin@lms.id,Admin,LMS,admin,admin123
+dosen01,dosen01@lms.id,Budi,Santoso,instructor,dosen123
+dosen02,dosen02@lms.id,Siti,Rahayu,instructor,dosen123
+siswa01,siswa01@lms.id,Andi,Pratama,student,siswa123
+siswa02,siswa02@lms.id,Budi,Kurniawan,student,siswa123
+siswa03,siswa03@lms.id,Citra,Dewi,student,siswa123
+siswa04,siswa04@lms.id,Dian,Fitriani,student,siswa123

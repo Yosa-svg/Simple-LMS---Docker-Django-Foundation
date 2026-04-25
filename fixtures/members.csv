@@ -1,0 +1,9 @@
+course_name,username,roles
+Pemrograman Web dengan Django,siswa01,std
+Pemrograman Web dengan Django,siswa02,std
+Pemrograman Web dengan Django,siswa03,ast
+Basis Data dengan PostgreSQL,siswa01,std
+Basis Data dengan PostgreSQL,siswa04,std
+Algoritma dan Struktur Data,siswa02,std
+Algoritma dan Struktur Data,siswa03,std
+Jaringan Komputer Dasar,siswa04,std

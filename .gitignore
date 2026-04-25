@@ -46,3 +46,14 @@ db.sqlite3-journal
 # OS
 .DS_Store
 Thumbs.db
+
+# Media & Static files (user uploads & generated assets)
+/media/
+/static/
+
+# Image files (test images, screenshots)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
