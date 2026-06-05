@@ -1,4 +1,7 @@
 services:
+  # ===========================================================================
+  # Django Web Application
+  # ===========================================================================
   app:
     build: .
     command: python manage.py runserver 0.0.0.0:8000
@@ -10,7 +13,13 @@ services:
       - .env
     depends_on:
       - db
+      - redis
+      - mongodb
+      - rabbitmq
 
+  # ===========================================================================
+  # PostgreSQL — Primary Database
+  # ===========================================================================
   db:
     image: postgres:15-alpine
     volumes:
@@ -22,5 +31,96 @@ services:
     ports:
       - "5432:5432"
 
+  # ===========================================================================
+  # Redis — Cache & Rate Limiting & Celery Result Backend
+  # Modul 9: Caching course list, course detail, rate limiting
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # ===========================================================================
+  # MongoDB — Activity Logs & Learning Analytics
+  # Modul 9: Document store untuk activity logs yang tidak perlu relasional
+  # ===========================================================================
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=simple_lms_logs
+
+  # ===========================================================================
+  # RabbitMQ — Message Broker untuk Celery
+  # Modul 9: Antrian pesan untuk async tasks
+  # Management UI: http://localhost:15672 (guest/guest)
+  # ===========================================================================
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  # ===========================================================================
+  # Celery Worker — Memproses Async Tasks
+  # Modul 9: send_enrollment_email, generate_certificate, export_course_report
+  # ===========================================================================
+  celery-worker:
+    build: .
+    command: celery -A config worker --loglevel=info --concurrency=4
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+      - mongodb
+
+  # ===========================================================================
+  # Celery Beat — Scheduled Task Scheduler
+  # Modul 9: update_course_statistics (setiap jam)
+  # ===========================================================================
+  celery-beat:
+    build: .
+    command: celery -A config beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+
+  # ===========================================================================
+  # Flower — Celery Monitoring Dashboard
+  # Modul 9: Monitor task queue, worker status, task history
+  # Dashboard: http://localhost:5555
+  # ===========================================================================
+  flower:
+    image: mher/flower:2.0
+    command: celery flower --broker=amqp://guest:guest@rabbitmq:5672// --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - rabbitmq
+      - redis
+
 volumes:
   postgres_data:
+  redis_data:
+  mongo_data:
+  rabbitmq_data:
