@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from pathlib import Path
+from datetime import timedelta
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -38,7 +39,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'lms',  # Aplikasi Simple LMS
+    'lms',                   # Aplikasi Simple LMS
+    'silk',                  # Query profiling - Django Silk
+    # Modul 7 — JWT Authentication
+    'ninja_simple_jwt',
+    # Modul 9 — Celery Scheduling
+    'django_celery_beat',
+    'django_celery_results',
 ]
 
 
@@ -50,6 +57,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'silk.middleware.SilkyMiddleware',  # Intercept semua request untuk profiling
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -155,3 +163,91 @@ LOGGING = {
         },
     },
 }
+
+
+# ==============================================================================
+# MODUL 7 — JWT Authentication (ninja-simple-jwt)
+# Docs: https://github.com/humberto-pereira/ninja-simple-jwt
+# ==============================================================================
+
+NINJA_SIMPLE_JWT = {
+    # Access token berlaku 30 menit (cukup untuk development, 5-15 menit untuk production)
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    # Refresh token berlaku 7 hari
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    # Algoritma RSA (asymmetric) — lebih aman dari HS256
+    'ALGORITHM': 'RS256',
+}
+
+
+# ==============================================================================
+# MODUL 9 — Redis Cache & Rate Limiting
+# Docs: https://github.com/jazzband/django-redis
+# ==============================================================================
+
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 5,
+            'SOCKET_TIMEOUT': 5,
+            'IGNORE_EXCEPTIONS': True,   # Jangan crash jika Redis down
+        },
+        'KEY_PREFIX': 'simplelms',
+        'TIMEOUT': 300,  # Default TTL: 5 menit
+    }
+}
+
+
+# ==============================================================================
+# MODUL 9 — MongoDB Activity Logs
+# ==============================================================================
+
+MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://mongodb:27017')
+MONGO_DB_NAME = os.environ.get('MONGO_DB_NAME', 'simple_lms_logs')
+
+
+# ==============================================================================
+# MODUL 9 — Celery Configuration
+# Broker: RabbitMQ | Backend: Redis
+# ==============================================================================
+
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'amqp://guest:guest@rabbitmq:5672//')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Jakarta'
+CELERY_ENABLE_UTC = True
+
+# Celery Beat — Scheduled tasks disimpan di database (django_celery_beat)
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Celery Results — Simpan hasil task di database
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+
+# Email backend — Console untuk development
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@simplelms.id'
+
+
+# ==============================================================================
+# MODUL 10 — Media Files (File Upload)
+# Konfigurasi untuk menyimpan file yang diupload user.
+# Docs: https://docs.djangoproject.com/en/4.2/topics/files/
+# ==============================================================================
+
+# URL publik untuk mengakses media files
+# Contoh: /media/course_images/python-course.jpg
+MEDIA_URL = '/media/'
+
+# Path absolut di filesystem tempat file disimpan
+# Di Docker, direktori ini terdapat di dalam container
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Static files (CSS, JavaScript, Images bawaan Django)
+STATIC_URL = '/static/'
