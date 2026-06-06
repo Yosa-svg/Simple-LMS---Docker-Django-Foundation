@@ -58,6 +58,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'silk.middleware.SilkyMiddleware',  # Intercept semua request untuk profiling
+    # Modul 10 — Rate Limiting Middleware
+    # Batasi: 20 req/min (anon) dan 100 req/min (authenticated) via Redis
+    'lms.middleware.RateLimitMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
