@@ -163,6 +163,16 @@ class Course(models.Model):
         verbose_name = 'Mata Kuliah'
         verbose_name_plural = 'Mata Kuliah'
         ordering = ['-created_at']
+        indexes = [
+            # Index pada price — sering dipakai filter() dan order_by() di lab
+            models.Index(fields=['price'], name='idx_course_price'),
+            # Index pada name — dipakai pencarian/contains
+            models.Index(fields=['name'], name='idx_course_name'),
+            # Composite index instructor + price — untuk query dashboard dosen
+            models.Index(fields=['instructor', 'price'], name='idx_course_instructor_price'),
+            # Index descending created_at — untuk default ordering
+            models.Index(fields=['-created_at'], name='idx_course_created_desc'),
+        ]
 
 
 # ==============================================================================

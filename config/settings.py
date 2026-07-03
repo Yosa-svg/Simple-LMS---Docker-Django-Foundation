@@ -205,6 +205,25 @@ CACHES = {
     }
 }
 
+# ==============================================================================
+# MODUL 12 — Session Management dengan Redis
+# Memindahkan session storage dari PostgreSQL ke Redis.
+#
+# Keuntungan:
+#   - Kecepatan: ~0.1ms (Redis) vs ~5-10ms (PostgreSQL)
+#   - Tidak membebani koneksi DB utama
+#   - Auto-expire via TTL tanpa perlu cron cleanup
+#
+# Cara kerja:
+#   Django menyimpan session data di Redis menggunakan cache backend yang
+#   sudah dikonfigurasi di CACHES['default'] di atas.
+# ==============================================================================
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"     # Gunakan cache 'default' (Redis)
+SESSION_COOKIE_AGE = 86400          # Session berlaku 24 jam (dalam detik)
+SESSION_SAVE_EVERY_REQUEST = False  # Hanya save jika session data berubah
+
 
 # ==============================================================================
 # MODUL 9 — MongoDB Activity Logs
@@ -232,6 +251,39 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 # Celery Results — Simpan hasil task di database
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+
+
+# ==============================================================================
+# MODUL 12 — Celery Beat Schedule
+# Mendefinisikan periodic tasks yang berjalan otomatis.
+#
+# Catatan: Karena kita pakai DatabaseScheduler, jadwal dikelola via Django Admin
+# (Periodic Tasks). CELERY_BEAT_SCHEDULE berikut DAPAT di-import secara manual
+# atau dijadikan referensi untuk setup di Admin.
+#
+# Jika ingin jadwal langsung dari settings (tanpa Admin), ganti scheduler ke:
+#   CELERY_BEAT_SCHEDULER = 'celery.beat.PersistentScheduler'
+# ==============================================================================
+
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # Generate statistik harian — setiap hari pukul 00:00 WIB
+    'daily-course-stats': {
+        'task': 'lms.tasks.generate_daily_stats',
+        'schedule': crontab(hour=0, minute=0),
+    },
+    # Cleanup log lama — setiap hari pukul 02:00 WIB
+    'cleanup-old-logs': {
+        'task': 'lms.tasks.cleanup_old_logs',
+        'schedule': crontab(hour=2, minute=0),
+    },
+    # Update statistik enrollment — setiap jam
+    'update-course-statistics': {
+        'task': 'lms.tasks.update_course_statistics',
+        'schedule': crontab(minute=0),  # Setiap awal jam
+    },
+}
 
 # Email backend — Console untuk development
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

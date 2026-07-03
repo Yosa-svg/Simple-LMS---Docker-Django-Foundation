@@ -285,3 +285,121 @@ def update_course_statistics():
     except Exception as exc:
         logger.error(f"[Task] update_course_statistics failed: {exc}")
         return {'status': 'error', 'error': str(exc)}
+
+
+# ==============================================================================
+# MODUL 12 — Triggered Task (untuk demonstrasi status-polling pattern)
+# ==============================================================================
+
+@shared_task(
+    name='lms.tasks.generate_course_report',
+    bind=True,
+    max_retries=1,
+)
+def generate_course_report(self, course_id: int):
+    """
+    Generate laporan statistik course dalam format JSON.
+
+    Dirancang untuk demonstrasi pola 'trigger and poll':
+        1. Client POST /reports/generate/{id}/ → mendapat task_id
+        2. Client GET  /reports/status/{task_id}/ → polling hingga SUCCESS
+
+    Args:
+        course_id: ID course yang akan di-generate reportnya
+
+    Returns:
+        dict: Statistik course (total members, contents, comments)
+    """
+    import time
+    try:
+        from lms.models import Course, CourseMember, CourseContent, Comment
+
+        course = Course.objects.get(pk=course_id)
+
+        # Simulasi proses berat (e.g., generate PDF, kalkulasi kompleks)
+        time.sleep(3)
+
+        total_members = CourseMember.objects.filter(course=course).count()
+        total_contents = CourseContent.objects.filter(course=course).count()
+        total_comments = Comment.objects.filter(course=course).count()
+
+        report = {
+            'course_id': course_id,
+            'course_name': course.name,
+            'total_members': total_members,
+            'total_contents': total_contents,
+            'total_comments': total_comments,
+            'generated_at': datetime.now().isoformat(),
+        }
+
+        logger.info(f"[Task] generate_course_report: Report selesai untuk course:{course_id}")
+        return report
+
+    except Exception as exc:
+        logger.error(f"[Task] generate_course_report failed: {exc}")
+        raise self.retry(exc=exc)
+
+
+# ==============================================================================
+# MODUL 12 — Scheduled Tasks (dijalankan periodik oleh Celery Beat)
+# ==============================================================================
+
+@shared_task(name='lms.tasks.generate_daily_stats')
+def generate_daily_stats():
+    """
+    Generate statistik harian LMS.
+
+    Dijadwalkan setiap hari pukul 00:00 WIB oleh Celery Beat.
+    Berguna untuk dashboard analytics dan laporan manajemen.
+
+    Returns:
+        dict: Statistik harian LMS
+    """
+    try:
+        from lms.models import Course, CourseMember, User
+
+        total_courses = Course.objects.count()
+        total_users = User.objects.count()
+        total_enrollments = CourseMember.objects.filter(roles='std').count()
+
+        stats = {
+            'date': datetime.now().date().isoformat(),
+            'total_courses': total_courses,
+            'total_users': total_users,
+            'total_enrollments': total_enrollments,
+        }
+
+        logger.info(f"[Task] generate_daily_stats: {stats}")
+        return stats
+
+    except Exception as exc:
+        logger.error(f"[Task] generate_daily_stats failed: {exc}")
+        return {'status': 'error', 'error': str(exc)}
+
+
+@shared_task(name='lms.tasks.cleanup_old_logs')
+def cleanup_old_logs():
+    """
+    Membersihkan data sementara atau cache yang sudah kedaluwarsa.
+
+    Dijadwalkan setiap hari pukul 02:00 WIB oleh Celery Beat.
+    Dalam production: hapus log aktivitas dari MongoDB yang lebih dari 30 hari,
+    clear expired cache keys, dst.
+
+    Returns:
+        dict: Informasi cleanup yang dilakukan
+    """
+    from datetime import timedelta
+    from django.core.cache import cache
+
+    threshold = datetime.now() - timedelta(days=30)
+
+    # Contoh: clear cache keys tertentu yang mungkin sudah stale
+    # (dalam production, bisa query MongoDB dan hapus old documents)
+    cache.delete('all_course_stats')
+
+    logger.info(f"[Task] cleanup_old_logs: Cleanup selesai, threshold: {threshold.date()}")
+    return {
+        'status': 'success',
+        'cleaned_before': threshold.date().isoformat(),
+    }

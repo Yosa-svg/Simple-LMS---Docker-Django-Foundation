@@ -57,3 +57,20 @@ Thumbs.db
 *.jpeg
 *.gif
 *.svg
+
+# Modul 7 — RSA Keys (JWT signing keys — JANGAN di-commit!)
+# Di-generate dengan: python manage.py make_rsa
+jwt-signing.pem
+jwt-signing.pub
+*.pem
+
+# Testing & Coverage
+.coverage
+.coveragerc
+htmlcov/
+.pytest_cache/
+pytest.ini
+
+# Celery
+celerybeat-schedule
+celerybeat.pid

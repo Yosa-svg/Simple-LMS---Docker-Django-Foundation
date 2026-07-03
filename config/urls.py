@@ -8,7 +8,12 @@ from django.conf.urls.static import static
 from lms.apiv1 import apiv1
 from lms.apiv2 import apiv2
 
+from django.views.generic import RedirectView
+
 urlpatterns = [
+    # Redirect root to API docs
+    path('', RedirectView.as_view(url='/api/v1/docs', permanent=False)),
+
     path('admin/', admin.site.urls),
 
     # Django Silk - Query Profiling Dashboard

@@ -24,6 +24,7 @@ Keuntungan:
 import json
 import logging
 from django.core.cache import cache
+from django_redis import get_redis_connection
 
 logger = logging.getLogger(__name__)
 
@@ -170,3 +171,64 @@ def get_rate_limit_info(ip: str, endpoint: str) -> dict:
         'limit': limit,
         'remaining': max(0, limit - current),
     }
+
+
+# ==============================================================================
+# LEADERBOARD (SORTED SETS)
+# ==============================================================================
+
+def get_redis_client():
+    """Mengembalikan koneksi Redis raw dari django-redis."""
+    return get_redis_connection("default")
+
+
+def increment_course_popularity(course_id: int, amount: int = 1):
+    """
+    Menambahkan score popularitas (enrollment) ke sorted set 'popular_courses'.
+    """
+    client = get_redis_client()
+    # ZINCRBY popular_courses <amount> course:<id>
+    client.zincrby('popular_courses', amount, f'course:{course_id}')
+    logger.debug(f"[Redis] Incremented popularity for course:{course_id} by {amount}")
+
+
+def get_popular_courses(limit: int = 10):
+    """
+    Mengambil top N courses terpopuler.
+    Returns list of tuples: [(course_id, score), ...]
+    """
+    client = get_redis_client()
+    # ZREVRANGE popular_courses 0 <limit-1> WITHSCORES
+    # Result format from redis-py: [(b'course:1', 150.0), ...]
+    results = client.zrevrange('popular_courses', 0, limit - 1, withscores=True)
+    
+    parsed_results = []
+    for item, score in results:
+        # Decode bytes if needed (depends on redis-py version and decode_responses flag)
+        item_str = item.decode('utf-8') if isinstance(item, bytes) else item
+        # item_str format is "course:123"
+        course_id = int(item_str.split(':')[1])
+        parsed_results.append((course_id, int(score)))
+        
+    return parsed_results
+
+
+def sync_popularity_from_db():
+    """
+    Sinkronisasi awal dari DB ke Redis Sorted Set jika Redis kosong/terhapus.
+    Menghitung jumlah enrollment dari tabel CourseMember untuk masing-masing course.
+    """
+    from lms.models import Course, CourseMember
+    from django.db.models import Count
+    
+    client = get_redis_client()
+    
+    # Ambil jumlah student (role='std') per course
+    stats = CourseMember.objects.filter(roles='std').values('course_id').annotate(count=Count('id'))
+    
+    for stat in stats:
+        course_id = stat['course_id']
+        count = stat['count']
+        client.zadd('popular_courses', {f'course:{course_id}': count})
+        
+    logger.info("[Redis] Synchronized popular_courses from database")
