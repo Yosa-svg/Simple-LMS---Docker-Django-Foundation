@@ -78,7 +78,7 @@ services:
   # ===========================================================================
   celery-worker:
     build: .
-    command: celery -A config worker --loglevel=info --concurrency=4
+    command: celery -A config worker --loglevel=info --concurrency=4 -E
     volumes:
       - .:/app
     env_file:
@@ -111,13 +111,18 @@ services:
   # Dashboard: http://localhost:5555
   # ===========================================================================
   flower:
-    image: mher/flower:2.0
-    command: celery flower --broker=amqp://guest:guest@rabbitmq:5672// --port=5555
+    build: .
+    command: celery -A config flower --port=5555
+    volumes:
+      - .:/app
     ports:
       - "5555:5555"
+    env_file:
+      - .env
     depends_on:
       - rabbitmq
       - redis
+      - db
 
 volumes:
   postgres_data:

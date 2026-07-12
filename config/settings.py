@@ -246,6 +246,11 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Jakarta'
 CELERY_ENABLE_UTC = True
 
+# Aktifkan task events agar Flower dapat memonitor task secara real-time
+CELERY_TASK_TRACK_STARTED = True          # Tandai task sebagai STARTED saat mulai diproses
+CELERY_WORKER_SEND_TASK_EVENTS = True     # Worker mengirim event ke Flower
+CELERY_TASK_SEND_SENT_EVENT = True        # Kirim event saat task dikirim ke broker
+
 # Celery Beat — Scheduled tasks disimpan di database (django_celery_beat)
 CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
